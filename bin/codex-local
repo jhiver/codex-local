@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+HOST="${HOST:-127.0.0.1}"
+PORT="${PORT:-1234}"
+URL="http://${HOST}:${PORT}/v1/models"
+MODEL_ALIAS="${MODEL_ALIAS:-qwen3.8-27b-uncensored:latest}"
+MODEL_DIR="${MODEL_DIR:-$HOME/models}"
+LOG_PATH="${LOG_PATH:-$MODEL_DIR/llama-server.log}"
+CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex-local}"
+
+# Subcommand handling
+case "${1:-}" in
+    start)
+        echo "🚀 Starting llama-server daemon..."
+        "$ROOT_DIR/scripts/start-server.sh" &
+        exit 0
+        ;;
+    stop)
+        "$ROOT_DIR/scripts/stop-server.sh"
+        exit 0
+        ;;
+    status)
+        "$ROOT_DIR/scripts/status-server.sh"
+        exit 0
+        ;;
+    logs)
+        if [[ -f "$LOG_PATH" ]]; then
+            exec tail -f -n 50 "$LOG_PATH"
+        else
+            echo "❌ No log file found at $LOG_PATH"
+            exit 1
+        fi
+        ;;
+    --help|-h)
+        echo "Usage: codex-local [COMMAND|OPTIONS]"
+        echo ""
+        echo "Commands:"
+        echo "  (none)      Ensure llama-server is running and launch Codex CLI"
+        echo "  start       Start llama-server in background"
+        echo "  stop        Stop llama-server"
+        echo "  status      Check health and model status"
+        echo "  logs        Tail llama-server logs"
+        echo ""
+        echo "Any other options are forwarded directly to Codex CLI."
+        exit 0
+        ;;
+esac
+
+# 1. Health check: Is llama-server already up?
+is_server_ready() {
+    curl -s -m 2 "$URL" >/dev/null 2>&1
+}
+
+if ! is_server_ready; then
+    echo "⚡ Local LLM server is offline. Starting llama-server in background..."
+
+    # Warn if Ollama is running (competing for Unified Memory)
+    if pgrep -f "ollama" >/dev/null 2>&1; then
+        echo "⚠️  Notice: Ollama is active in background and may contend for Apple Silicon Metal VRAM."
+        echo "   If you hit out-of-memory errors, run: brew services stop ollama"
+    fi
+
+    # Launch start-server.sh in background
+    nohup "$ROOT_DIR/scripts/start-server.sh" >/dev/null 2>&1 &
+
+    # Wait for server to load model into Metal GPU
+    echo -n "⏳ Initializing model into Metal GPU VRAM"
+    MAX_RETRIES=60
+    READY=0
+    for ((i=1; i<=MAX_RETRIES; i++)); do
+        if is_server_ready; then
+            READY=1
+            echo ""
+            echo "✅ Engine ready (port ${PORT})!"
+            break
+        fi
+        echo -n "."
+        sleep 0.5
+    done
+
+    if [[ $READY -ne 1 ]]; then
+        echo ""
+        echo "❌ Error: llama-server failed to start within 30 seconds." >&2
+        if [[ -f "$LOG_PATH" ]]; then
+            echo "--- Last 20 lines of log ($LOG_PATH) ---" >&2
+            tail -n 20 "$LOG_PATH" >&2
+        fi
+        exit 1
+    fi
+fi
+
+# 2. Setup ~/.codex-local configuration if missing
+mkdir -p "$CODEX_HOME_DIR"
+if [[ ! -f "$CODEX_HOME_DIR/config.toml" ]]; then
+    echo "⚙️  Initializing $CODEX_HOME_DIR/config.toml with optimized settings..."
+    cp "$ROOT_DIR/config/config.toml" "$CODEX_HOME_DIR/config.toml"
+    
+    # If primary ~/.codex/config.toml has trusted projects, append them
+    if [[ -f "$HOME/.codex/config.toml" ]]; then
+        grep -A 2 '\[projects\.' "$HOME/.codex/config.toml" >> "$CODEX_HOME_DIR/config.toml" 2>/dev/null || true
+    fi
+fi
+
+# Symlink auth.json if primary exists and local does not
+if [[ -f "$HOME/.codex/auth.json" && ! -e "$CODEX_HOME_DIR/auth.json" ]]; then
+    ln -s "$HOME/.codex/auth.json" "$CODEX_HOME_DIR/auth.json" 2>/dev/null || true
+fi
+
+# 3. Check codex CLI installation
+if ! command -v codex >/dev/null 2>&1; then
+    echo "❌ Error: 'codex' CLI not found in PATH." >&2
+    echo "👉 Install Codex CLI or ensure it is accessible in your environment." >&2
+    exit 1
+fi
+
+# 4. Exec Codex CLI with local provider pointing to port 1234
+export CODEX_HOME="$CODEX_HOME_DIR"
+exec codex --oss --local-provider lmstudio -m "$MODEL_ALIAS" "$@"

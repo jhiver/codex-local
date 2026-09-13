@@ -1,0 +1,16 @@
+# Codex CLI configuration for local inference
+# Optimized for Qwen3.8-27B on llama-server with Metal GPU acceleration
+
+model = "qwen3.8-27b-uncensored:latest"
+model_context_window = 65536
+model_auto_compact_token_limit = 58000
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+
+[features]
+# CRITICAL: Disable plugins and apps to avoid sending tens of thousands of tokens
+# of MCP/plugin schemas on every prompt turn (reduces prompt ingestion from ~85k to ~4.8k tokens).
+plugins = false
+recommended_plugins = false
+apps = false
+multi_agent = false
