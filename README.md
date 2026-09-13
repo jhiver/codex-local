@@ -30,12 +30,17 @@ Ce dépôt rassemble les correctifs trouvés pour contourner ces blocages.
 
 ---
 
-## Modèles : Aligné vs Uncensored
+## Modèle par défaut : Uncensored + GSQ-RCO + MTP
 
-> ⚠️ **Attention au nom du modèle :**  
-> Le fichier téléchargé par défaut dans le script d'installation (`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`) est la version **officielle Qwen3.8-27B-Instruct**, donc **alignée et censurée** (elle refuse les insultes, harcèlement, etc.).
->
-> Même si l'alias porte le suffixe `uncensored` par commodité de configuration locale, les poids sous-jacents restent ceux d'Alibaba. Si vous cherchez un vrai modèle abliteré/sans garde-fous avec MTP, il faut pointer vers des variantes communautaires non censurées (ex. `RentedNoodle/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored` ou `HauhauCS`).
+Le modèle sélectionné et installé par défaut est :
+👉 **[`RentedNoodle/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored`](https://huggingface.co/RentedNoodle/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored)** (`Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored-v1.1.gguf`, **9,75 GiB** / 10,4 Go).
+
+* **Vraiment non censuré** : Basé sur `huihui-ai/Huihui-Qwen3.8-27B-abliterated` (le vecteur de refus a été neutralisé chirurgicalement sans dégrader la logique).
+* **Quantification GSQ-RCO** : Applique la carte de quantification riemannienne non-uniforme d'ISTA-DASLab (96 tenseurs d'attention/embeddings sensibles conservés en haute précision BF16).
+* **Tête MTP native** : Préserve le décodage spéculatif multi-tokens.
+* **Validé sur les outils** : Passe la suite de tests tool-calls JSON (8/8) requise par Codex.
+
+*(Note : le modèle officiel `ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` d'Alibaba reste supporté en fallback dans `start-server.sh`, mais intègre les refus moraux standards).*
 
 ---
 

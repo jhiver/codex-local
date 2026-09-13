@@ -7,10 +7,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODEL_DIR="${MODEL_DIR:-$HOME/models}"
-MODEL_FILENAME="Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf"
+MODEL_FILENAME="Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored-v1.1.gguf"
 MODEL_PATH="$MODEL_DIR/$MODEL_FILENAME"
-MODEL_URL="https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF/resolve/main/$MODEL_FILENAME"
-EXPECTED_BYTES=12120016960
+MODEL_URL="https://huggingface.co/RentedNoodle/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored/resolve/main/$MODEL_FILENAME"
+EXPECTED_BYTES=10466420544
 
 echo "============================================================"
 echo "🍏 Setting up codex-local for Apple Silicon Metal GPU"

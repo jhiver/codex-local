@@ -7,7 +7,13 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Configurable options
 MODEL_DIR="${MODEL_DIR:-$HOME/models}"
-MODEL_PATH="${MODEL_PATH:-$MODEL_DIR/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf}"
+if [[ -z "${MODEL_PATH:-}" ]]; then
+    if [[ -f "$MODEL_DIR/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored-v1.1.gguf" ]]; then
+        MODEL_PATH="$MODEL_DIR/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-Uncensored-v1.1.gguf"
+    else
+        MODEL_PATH="$MODEL_DIR/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf"
+    fi
+fi
 TEMPLATE_PATH="${TEMPLATE_PATH:-$ROOT_DIR/templates/template.jinja}"
 LOG_PATH="${LOG_PATH:-$MODEL_DIR/llama-server.log}"
 HOST="${HOST:-127.0.0.1}"
